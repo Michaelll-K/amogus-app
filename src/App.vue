@@ -343,13 +343,20 @@
 
           <!-- VITALS Section -->
           <div v-if="!shouldShowOxygenAlert" class="vitals-section">
-            <div class="vitals-header">
-              <h3>🏥 VITALS - Monitor Życia</h3>
-              <div class="vitals-status">
-                <span class="status-indicator online"></span>
-                <span class="status-text">System Aktywny</span>
+                      <div class="vitals-header">
+            <h3>🏥 VITALS - Monitor Życia</h3>
+            <div class="vitals-status">
+              <span class="status-indicator online"></span>
+              <span class="status-text">System Aktywny</span>
+
+              <div v-if="cacheInfo.isCached" class="cache-info">
+                <span class="cache-indicator">⏰</span>
+                <span class="cache-text">
+                  Cooldown: {{ cacheInfo.minutesLeft }}:{{ cacheInfo.secondsLeft.toString().padStart(2, '0') }}
+                </span>
               </div>
             </div>
+          </div>
             
             <div class="vitals-container">
               <div v-if="gameState.playersInfo && gameState.playersInfo.length > 0" class="vitals-grid">
@@ -1107,6 +1114,10 @@ export default {
       panicCooldown: null
     })
     
+    // Cache dla checkGame - zapobiega zbyt częstym requestom
+    const lastCheckGameTime = ref(0)
+    const CACHE_DURATION = 5 * 60 * 1000 // 5 minut w milisekundach
+    
     // Konfiguracja API z fallback
     const API_BASE = 'https://agrosense-web-app.azurewebsites.net/api/admin' //process.env.NODE_ENV === 'development' 
       // ? '/api/admin'  // Używa proxy w developmencie
@@ -1785,12 +1796,27 @@ export default {
       tasks.value = []
       playersLoaded.value = false
       tasksLoaded.value = false
+      
+      // Wyczyść cache przy wylogowaniu
+      lastCheckGameTime.value = 0
+      
       showMessage('Wylogowano pomyślnie!')
     }
+    
+
     
     // Check game status on application load
     const checkGame = async () => {
       console.log('🎯 checkGame() wywołana przy odświeżeniu strony')
+      
+      // Sprawdź czy minęło 5 minut od ostatniego requestu
+      const now = Date.now()
+      const timeSinceLastCheck = now - lastCheckGameTime.value
+      
+      if (timeSinceLastCheck < CACHE_DURATION) {
+        console.log(`⏰ Pomijam request - minęło ${Math.round(timeSinceLastCheck / 1000)}s z ${CACHE_DURATION / 1000}s`)
+        return
+      }
       
       try {
         const url = `${PLAYER_API_BASE}/check-game`
@@ -1821,6 +1847,9 @@ export default {
             
             // Update game state with received data
             if (gameData) {
+              // Zaktualizuj czas ostatniego requestu
+              lastCheckGameTime.value = now
+              
               updateGameState(gameData)
               console.log('🔄 Game state zaktualizowany z checkGame')
             }
@@ -2411,6 +2440,7 @@ export default {
     
     // Check if user is already logged in and migrate O2 localStorage
     onMounted(async () => {
+      console.log('🚀 Aplikacja uruchomiona z ograniczeniem requestów co 5 minut')
       // Check initial game state first - before any other operations
       await checkGame()
       
@@ -2462,18 +2492,18 @@ export default {
       const handleVisibilityChange = () => {
         if (!document.hidden) {
           console.log('🔍 Strona stała się widoczna - wywołanie checkGame()')
-          checkGame()
+          checkGame() // Używa cache jeśli dostępny
         }
       }
       
       const handleWindowFocus = () => {
         console.log('🔍 Okno uzyskało focus - wywołanie checkGame()')
-        checkGame()
+        checkGame() // Używa cache jeśli dostępny
       }
       
       const handlePageShow = () => {
         console.log('🔍 PageShow event - wywołanie checkGame()')
-        checkGame()
+        checkGame() // Używa cache jeśli dostępny
       }
       
       document.addEventListener('visibilitychange', handleVisibilityChange)
@@ -2588,6 +2618,21 @@ export default {
       return currentPlayer && currentPlayer.role && !roleModalShown.value;
     });
     
+    // Informacje o cache
+    const cacheInfo = computed(() => {
+      const now = Date.now()
+      const timeSinceLastCheck = now - lastCheckGameTime.value
+      const timeLeft = Math.max(0, CACHE_DURATION - timeSinceLastCheck)
+      
+      return {
+        isCached: timeSinceLastCheck < CACHE_DURATION,
+        timeSinceLastCheck,
+        timeLeft,
+        minutesLeft: Math.floor(timeLeft / 60000),
+        secondsLeft: Math.floor((timeLeft % 60000) / 1000)
+      }
+    });
+    
     // Current time for reactive updates
     const currentTime = ref(Date.now())
     let timeUpdateTimer = null
@@ -2599,6 +2644,10 @@ export default {
       }
       timeUpdateTimer = setInterval(() => {
         currentTime.value = Date.now()
+        // Aktualizuj cache info co sekundę
+        if (cacheInfo.value.isCached && cacheInfo.value.timeLeft <= 0) {
+          console.log('⏰ Cache wygasł - następne wywołanie checkGame() będzie wykonywać request')
+        }
       }, 1000)
     }
     
@@ -2724,6 +2773,10 @@ export default {
       newTask,
       login,
       logout,
+      // Cache info
+      lastCheckGameTime,
+      CACHE_DURATION,
+      cacheInfo,
       // Player registration
       playerName,
       playerRegistrationLoading,
@@ -4428,6 +4481,31 @@ html, body {
   font-size: 12px;
   text-transform: uppercase;
   letter-spacing: 1px;
+}
+
+
+
+.cache-info {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  background: rgba(0, 123, 255, 0.1);
+  padding: 4px 8px;
+  border-radius: 12px;
+  border: 1px solid #007bff;
+}
+
+.cache-indicator {
+  font-size: 12px;
+}
+
+.cache-text {
+  color: #0056b3;
+  font-family: 'Orbitron', monospace;
+  font-weight: 600;
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
 }
 
 .vitals-container {

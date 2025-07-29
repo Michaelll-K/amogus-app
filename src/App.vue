@@ -1496,6 +1496,12 @@ export default {
         roleModalShown.value = false;
       }
       
+      // Reset sabotage checked flag when new sabotage starts
+      if (!gameState.value.sabotageDeadlineDateUtc && status.sabotageDeadlineDateUtc) {
+        console.log('💀 Nowy sabotaż rozpoczęty, resetuję sabotageChecked');
+        sabotageChecked.value = false;
+      }
+      
       gameState.value = {
         playersInfo: status.playersInfo || [],
         isGameActive: status.isGameActive || false,
@@ -2363,7 +2369,7 @@ export default {
     
     // Check if user is already logged in and migrate O2 localStorage
     onMounted(async () => {
-      console.log('🚀 Aplikacja uruchomiona')
+      console.log('🚀 Aplikacja uruchomiona z automatycznym sprawdzaniem sabotażu')
       
       // Migrate from old O2 systems to new hasBeenAdmin + o2Choice system
       const oldO2System = localStorage.getItem('o2SystemActivated') === 'true'
@@ -2542,6 +2548,38 @@ export default {
     const currentTime = ref(Date.now())
     let timeUpdateTimer = null
     
+    // Track if sabotage has been checked to avoid multiple calls
+    const sabotageChecked = ref(false)
+    
+        // Check sabotage deadline
+    const checkSabotageDeadline = async () => {
+      if (gameState.value.sabotageDeadlineDateUtc && gameState.value.sabotageDeadlineDateUtc <= Date.now() && !sabotageChecked.value) {
+        console.log('⏰ Sabotaż się zakończył - sprawdzam status')
+        sabotageChecked.value = true
+        
+        try {
+          const response = await fetch(`${HEADQUARTERS_API_BASE}/check-sabotage`, {
+            method: 'GET',
+            headers: {
+              'Content-Type': 'application/json'
+            }
+          })
+          
+          if (response.ok) {
+            console.log('✅ Status sabotażu sprawdzony')
+            showMessage('Status sabotażu został sprawdzony', 'success')
+          } else {
+            const errorText = await response.text()
+            console.error('❌ Błąd podczas sprawdzania statusu sabotażu:', response.status, errorText)
+            showMessage(`Błąd sprawdzania sabotażu: ${errorText}`, 'error')
+          }
+        } catch (error) {
+          console.error('💥 Błąd podczas sprawdzania sabotażu:', error)
+          showMessage('Błąd połączenia podczas sprawdzania sabotażu', 'error')
+        }
+      }
+    }
+    
     // Update current time every second
     const startTimeUpdate = () => {
       if (timeUpdateTimer) {
@@ -2549,7 +2587,8 @@ export default {
       }
       timeUpdateTimer = setInterval(() => {
         currentTime.value = Date.now()
-
+        // Sprawdź sabotaż co sekundę
+        checkSabotageDeadline()
       }, 1000)
     }
     
@@ -2733,6 +2772,8 @@ export default {
       releaseFirstO2,
       pressSecondO2,
       releaseSecondO2,
+      checkSabotageDeadline,
+      sabotageChecked,
       // Victory modal
       showVictoryModal,
       closeVictoryModal,

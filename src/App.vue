@@ -1466,9 +1466,6 @@ export default {
         console.log('SignalR: Połączono pomyślnie')
         showMessage('Połączono z serwerem w czasie rzeczywistym')
         
-        // Check game state after SignalR connection is established
-        setTimeout(() => checkGame(), 1000) // Slight delay to ensure connection is stable
-        
       } catch (error) {
         connectionStatus.value = 'Error'
         console.error('SignalR: Błąd połączenia:', error)

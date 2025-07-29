@@ -349,12 +349,7 @@
               <span class="status-indicator online"></span>
               <span class="status-text">System Aktywny</span>
 
-              <div v-if="cacheInfo.isCached" class="cache-info">
-                <span class="cache-indicator">⏰</span>
-                <span class="cache-text">
-                  Cooldown: {{ cacheInfo.minutesLeft }}:{{ cacheInfo.secondsLeft.toString().padStart(2, '0') }}
-                </span>
-              </div>
+
             </div>
           </div>
             
@@ -1114,9 +1109,7 @@ export default {
       panicCooldown: null
     })
     
-    // Cache dla checkGame - zapobiega zbyt częstym requestom
-    const lastCheckGameTime = ref(0)
-    const CACHE_DURATION = 5 * 60 * 1000 // 5 minut w milisekundach
+
     
     // Konfiguracja API z fallback
     const API_BASE = 'https://agrosense-web-app.azurewebsites.net/api/admin' //process.env.NODE_ENV === 'development' 
@@ -1450,8 +1443,6 @@ export default {
         connection.value.onreconnected(() => {
           connectionStatus.value = 'Connected'
           console.log('SignalR: Reconnected')
-          // Check game state after reconnection
-          setTimeout(() => checkGame(), 1000)
         })
         
         connection.value.onclose(() => {
@@ -1599,9 +1590,6 @@ export default {
           
           // Load player tasks after automatic login
           loadPlayerTasks()
-          
-          // Check game state again to ensure we have latest data
-          checkGame()
         }
       }
     }
@@ -1797,78 +1785,14 @@ export default {
       playersLoaded.value = false
       tasksLoaded.value = false
       
-      // Wyczyść cache przy wylogowaniu
-      lastCheckGameTime.value = 0
+
       
       showMessage('Wylogowano pomyślnie!')
     }
     
 
     
-    // Check game status on application load
-    const checkGame = async () => {
-      console.log('🎯 checkGame() wywołana przy odświeżeniu strony')
-      
-      // Sprawdź czy minęło 5 minut od ostatniego requestu
-      const now = Date.now()
-      const timeSinceLastCheck = now - lastCheckGameTime.value
-      
-      if (timeSinceLastCheck < CACHE_DURATION) {
-        console.log(`⏰ Pomijam request - minęło ${Math.round(timeSinceLastCheck / 1000)}s z ${CACHE_DURATION / 1000}s`)
-        return
-      }
-      
-      try {
-        const url = `${PLAYER_API_BASE}/check-game`
-        console.log('📡 Wywołanie checkGame API:', url)
-        
-        const response = await fetch(url, {
-          method: 'GET',
-          headers: {
-            'Content-Type': 'application/json'
-          }
-        })
-        
-        console.log('📊 checkGame response status:', response.status)
-        
-        if (response.ok) {
-          // Sprawdź czy odpowiedź ma zawartość przed parsowaniem JSON
-          const responseText = await response.text()
-          console.log('📄 Raw response text:', responseText)
-          
-          if (!responseText || responseText.trim() === '') {
-            console.warn('⚠️ Serwer zwrócił pustą odpowiedź')
-            return
-          }
-          
-          try {
-            const gameData = JSON.parse(responseText)
-            console.log('✅ Stan gry przy ładowaniu:', gameData)
-            
-            // Update game state with received data
-            if (gameData) {
-              // Zaktualizuj czas ostatniego requestu
-              lastCheckGameTime.value = now
-              
-              updateGameState(gameData)
-              console.log('🔄 Game state zaktualizowany z checkGame')
-            }
-          } catch (jsonError) {
-            console.error('❌ Błąd parsowania JSON:', jsonError)
-            console.error('📄 Niepoprawna odpowiedź z serwera:', responseText)
-          }
-        } else {
-          console.warn('❌ Nie udało się pobrać stanu gry:', response.status)
-          const errorText = await response.text()
-          console.warn('❌ Error response:', errorText)
-        }
-      } catch (error) {
-        console.error('💥 Błąd podczas sprawdzania stanu gry:', error)
-        if (error.message.includes('fetch')) {
-          console.error('🌐 Problem z połączeniem sieciowym - sprawdź czy API działa na porcie 7144')
-        }
-      }
-    }
+
     
     // Player registration functions
     const registerPlayer = async () => {
@@ -1947,8 +1871,7 @@ export default {
           // Load player tasks after successful login
           loadPlayerTasks()
           
-          // Check game state to get latest data
-          checkGame()
+
         } else {
           const error = await response.text()
           showMessage(error.replace(/"/g, ''), 'error')
@@ -2440,9 +2363,7 @@ export default {
     
     // Check if user is already logged in and migrate O2 localStorage
     onMounted(async () => {
-      console.log('🚀 Aplikacja uruchomiona z ograniczeniem requestów co 5 minut')
-      // Check initial game state first - before any other operations
-      await checkGame()
+      console.log('🚀 Aplikacja uruchomiona')
       
       // Migrate from old O2 systems to new hasBeenAdmin + o2Choice system
       const oldO2System = localStorage.getItem('o2SystemActivated') === 'true'
@@ -2491,19 +2412,16 @@ export default {
       // Add event listeners for page visibility and focus
       const handleVisibilityChange = () => {
         if (!document.hidden) {
-          console.log('🔍 Strona stała się widoczna - wywołanie checkGame()')
-          checkGame() // Używa cache jeśli dostępny
+          console.log('🔍 Strona stała się widoczna')
         }
       }
       
       const handleWindowFocus = () => {
-        console.log('🔍 Okno uzyskało focus - wywołanie checkGame()')
-        checkGame() // Używa cache jeśli dostępny
+        console.log('🔍 Okno uzyskało focus')
       }
       
       const handlePageShow = () => {
-        console.log('🔍 PageShow event - wywołanie checkGame()')
-        checkGame() // Używa cache jeśli dostępny
+        console.log('🔍 PageShow event')
       }
       
       document.addEventListener('visibilitychange', handleVisibilityChange)
@@ -2618,20 +2536,7 @@ export default {
       return currentPlayer && currentPlayer.role && !roleModalShown.value;
     });
     
-    // Informacje o cache
-    const cacheInfo = computed(() => {
-      const now = Date.now()
-      const timeSinceLastCheck = now - lastCheckGameTime.value
-      const timeLeft = Math.max(0, CACHE_DURATION - timeSinceLastCheck)
-      
-      return {
-        isCached: timeSinceLastCheck < CACHE_DURATION,
-        timeSinceLastCheck,
-        timeLeft,
-        minutesLeft: Math.floor(timeLeft / 60000),
-        secondsLeft: Math.floor((timeLeft % 60000) / 1000)
-      }
-    });
+
     
     // Current time for reactive updates
     const currentTime = ref(Date.now())
@@ -2644,10 +2549,7 @@ export default {
       }
       timeUpdateTimer = setInterval(() => {
         currentTime.value = Date.now()
-        // Aktualizuj cache info co sekundę
-        if (cacheInfo.value.isCached && cacheInfo.value.timeLeft <= 0) {
-          console.log('⏰ Cache wygasł - następne wywołanie checkGame() będzie wykonywać request')
-        }
+
       }, 1000)
     }
     
@@ -2773,10 +2675,7 @@ export default {
       newTask,
       login,
       logout,
-      // Cache info
-      lastCheckGameTime,
-      CACHE_DURATION,
-      cacheInfo,
+
       // Player registration
       playerName,
       playerRegistrationLoading,
@@ -2823,7 +2722,6 @@ export default {
       // Game State
       gameState,
       updateGameState,
-      checkGame,
       checkPlayerRegistration,
       handleGameStateChanges,
       handleGameActive,
@@ -4485,28 +4383,7 @@ html, body {
 
 
 
-.cache-info {
-  display: flex;
-  align-items: center;
-  gap: 5px;
-  background: rgba(0, 123, 255, 0.1);
-  padding: 4px 8px;
-  border-radius: 12px;
-  border: 1px solid #007bff;
-}
 
-.cache-indicator {
-  font-size: 12px;
-}
-
-.cache-text {
-  color: #0056b3;
-  font-family: 'Orbitron', monospace;
-  font-weight: 600;
-  font-size: 10px;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-}
 
 .vitals-container {
   background: #ffffff;  

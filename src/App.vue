@@ -988,7 +988,7 @@
 
 <script>
 import { ref, onMounted, onBeforeUnmount, computed } from 'vue'
-import { HubConnectionBuilder, LogLevel } from '@microsoft/signalr'
+import { HubConnectionBuilder, HttpTransportType, LogLevel } from '@microsoft/signalr'
 
 export default {
   name: 'App',
@@ -1423,7 +1423,8 @@ export default {
       try {
         connection.value = new HubConnectionBuilder()
           .withUrl(hubUrl, {
-            withCredentials: true
+            withCredentials: true,
+            transport: HttpTransportType.WebSockets | HttpTransportType.LongPolling
           })
           .withAutomaticReconnect()
           .configureLogging(LogLevel.Information)

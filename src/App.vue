@@ -273,35 +273,39 @@
           
           <!-- PANIC Button Section -->
           <div v-if="!shouldShowOxygenAlert" class="panic-section">
-            <button 
-              v-if="!gameState.isPanic && !gameState.isCorpse"
-              @click="showPanicDialog" 
-              class="btn-panic"
-              :disabled="loading"
-            >
-              <div v-if="panicCooldownTimeLeft" class="panic-cooldown-timer">
-                <div class="cooldown-header">
-                  <span class="cooldown-icon">⏰</span>
-                  <span class="cooldown-label">Cooldown Paniki:</span>
+            <div class="panic-container">
+              <button class="main-panel-map" @click="openMapModal" :disabled="!isLoggedInToGame || isPlayerDead">
+                <img src="../images/icon-map.png" alt="Map" class="btn-icon-img">
+              </button>
+
+              <button 
+                v-if="!gameState.isPanic && !gameState.isCorpse"
+                @click="showPanicDialog" 
+                class="btn-panic"
+                :disabled="loading"
+              >
+                <div v-if="panicCooldownTimeLeft" class="panic-cooldown-timer">
+                  <div class="cooldown-header">
+                    <span class="cooldown-icon">⏰</span>
+                    <span class="cooldown-label">Cooldown Paniki:</span>
+                  </div>
+                  <div class="cooldown-time">
+                    {{ panicCooldownTimeLeft.minutes.toString().padStart(2, '0') }}:{{ panicCooldownTimeLeft.seconds.toString().padStart(2, '0') }}
+                  </div>
                 </div>
-                <div class="cooldown-time">
-                  {{ panicCooldownTimeLeft.minutes.toString().padStart(2, '0') }}:{{ panicCooldownTimeLeft.seconds.toString().padStart(2, '0') }}
+                <div v-else>
+                  🚨 PANIC 🚨
                 </div>
-              </div>
-              <div v-else>
-                🚨 PANIC 🚨
-              </div>
-            </button>
-            <button 
-            v-else
-            @click="endPanic" 
-            class="btn-end-meeting"
-            :disabled="loading"
-            >
-            🏁 Zakończ spotkanie
-          </button>
-          
-          <!-- Panic Cooldown Timer -->
+              </button>
+              <button 
+                v-else
+                @click="endPanic" 
+                class="btn-end-meeting"
+                :disabled="loading"
+                >
+                🏁 Zakończ spotkanie
+              </button>
+            </div>
             
             <!-- Blackmail info during meeting -->
             <div v-if="(gameState.isPanic || gameState.isCorpse) && blackmailedPlayer" class="blackmail-info">
@@ -3543,9 +3547,15 @@ html, body {
 
 /* PANIC Button Styles */
 .panic-section {
-  text-align: center;
+  position: relative;
   margin-bottom: 30px;
   padding: 20px;
+  text-align: center;
+}
+
+.panic-container {
+  position: relative;
+  display: inline-block;
 }
 
 .btn-panic {
@@ -4960,6 +4970,26 @@ html, body {
   transition: all 0.3s ease;
   font-family: 'Varela Round', monospace;
   position: relative;
+  overflow: hidden;
+  padding: 0;
+}
+
+.main-panel-map {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 80px;
+  height: 80px;
+  background: transparent;
+  border: none;
+  border-radius: 50%;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  font-family: 'Varela Round', monospace;
+  position: absolute;
+  left: -120px;
+  top: 50%;
+  transform: translateY(-50%);
   overflow: hidden;
   padding: 0;
 }

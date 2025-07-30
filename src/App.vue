@@ -2335,10 +2335,14 @@ export default {
     // Panic functions
     const showPanicDialog = async () => {
       const now = currentTime.value;
-      const cooldownTime = gameState.value.panicCooldown.getTime();
       
-      if (cooldownTime > now) {
-        return; // Cooldown nadal trwa
+      // Check if panic cooldown exists and is still active
+      if (gameState.value.panicCooldown) {
+        const cooldownTime = gameState.value.panicCooldown.getTime();
+        
+        if (cooldownTime > now) {
+          return; // Cooldown nadal trwa
+        }
       }
 
       showPanicModal.value = true
@@ -2640,11 +2644,8 @@ export default {
       }
       timeUpdateTimer = setInterval(() => {
         currentTime.value = Date.now()
-<<<<<<< HEAD
         // Sprawdź sabotaż co sekundę
         checkSabotageDeadline()
-=======
->>>>>>> parent of b47c2b0 (simplify checkGame())
       }, 1000)
     }
     
@@ -2891,7 +2892,7 @@ export default {
 </script>
 
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;700;900&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Varela+Round:wght@400;500;700;900&display=swap');
 
 * {
   box-sizing: border-box;
@@ -2915,7 +2916,7 @@ html, body {
 }
 
 #app {
-  font-family: 'Orbitron', 'Courier New', monospace;
+  font-family: 'Varela Round', 'Courier New', monospace;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   color: #ffffff;
@@ -2983,7 +2984,7 @@ html, body {
   font-weight: 700;
   color: #b8b8d4;
   transition: all 0.3s ease;
-  font-family: 'Orbitron', monospace;
+  font-family: 'Varela Round', monospace;
   text-transform: uppercase;
   letter-spacing: 0.5px;
   position: relative;
@@ -3037,7 +3038,7 @@ html, body {
   text-transform: uppercase;
   letter-spacing: 1px;
   text-shadow: 0 0 20px rgba(255, 107, 107, 0.6);
-  font-family: 'Orbitron', monospace;
+  font-family: 'Varela Round', monospace;
 }
 
 /* Admin Panel Styles - Among Us Theme */
@@ -3055,7 +3056,7 @@ html, body {
 .login-section h3 {
   color: #ff6b6b;
   text-align: center;
-  font-family: 'Orbitron', monospace;
+  font-family: 'Varela Round', monospace;
   font-weight: 900;
   text-transform: uppercase;
   letter-spacing: 2px;
@@ -3089,7 +3090,7 @@ html, body {
 
 .admin-header span {
   color: #4ecdc4;
-  font-family: 'Orbitron', monospace;
+  font-family: 'Varela Round', monospace;
   font-weight: 700;
   font-size: 18px;
   text-transform: uppercase;
@@ -3125,7 +3126,7 @@ html, body {
   margin: 0 0 15px 0;
   color: #4ecdc4;
   font-size: 18px;
-  font-family: 'Orbitron', monospace;
+  font-family: 'Varela Round', monospace;
   font-weight: 900;
   text-transform: uppercase;
   letter-spacing: 1px;
@@ -3141,7 +3142,7 @@ html, body {
   margin-bottom: 8px;
   font-weight: 700;
   color: #96ceb4;
-  font-family: 'Orbitron', monospace;
+  font-family: 'Varela Round', monospace;
   text-transform: uppercase;
   letter-spacing: 1px;
   font-size: 14px;
@@ -3157,7 +3158,7 @@ html, body {
   font-size: 16px;
   background: linear-gradient(135deg, #1a1a2e 0%, #2d2d3f 100%);
   color: #ffffff;
-  font-family: 'Orbitron', monospace;
+  font-family: 'Varela Round', monospace;
   transition: all 0.3s ease;
   box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.3);
   -webkit-appearance: none;
@@ -3182,7 +3183,7 @@ html, body {
 .form-group textarea {
   min-height: 100px;
   resize: vertical;
-  font-family: 'Orbitron', monospace;
+  font-family: 'Varela Round', monospace;
 }
 
 .form-row {
@@ -3200,7 +3201,7 @@ html, body {
 .task-form h4 {
   margin: 0 0 20px 0;
   color: #96ceb4;
-  font-family: 'Orbitron', monospace;
+  font-family: 'Varela Round', monospace;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 1px;
@@ -3220,7 +3221,7 @@ html, body {
   text-align: center;
   transition: all 0.3s ease;
   margin-bottom: 10px;
-  font-family: 'Orbitron', monospace;
+  font-family: 'Varela Round', monospace;
   text-transform: uppercase;
   letter-spacing: 1px;
   position: relative;
@@ -3373,7 +3374,7 @@ html, body {
 .player-name {
   font-weight: 700;
   color: #ffffff;
-  font-family: 'Orbitron', monospace;
+  font-family: 'Varela Round', monospace;
   text-transform: uppercase;
   letter-spacing: 1px;
 }
@@ -3381,7 +3382,7 @@ html, body {
 .player-role {
   color: #96ceb4;
   font-size: 14px;
-  font-family: 'Orbitron', monospace;
+  font-family: 'Varela Round', monospace;
   font-weight: 500;
   text-transform: uppercase;
   background: linear-gradient(135deg, #96ceb4, #4ecdc4);
@@ -3393,7 +3394,7 @@ html, body {
 .player-role-hidden {
   color: #666666;
   font-size: 14px;
-  font-family: 'Orbitron', monospace;
+  font-family: 'Varela Round', monospace;
   font-weight: 500;
   text-transform: uppercase;
   font-style: italic;
@@ -3410,7 +3411,7 @@ html, body {
 .task-info h5 {
   margin: 0 0 8px 0;
   color: #ffffff;
-  font-family: 'Orbitron', monospace;
+  font-family: 'Varela Round', monospace;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 1px;
@@ -3421,7 +3422,7 @@ html, body {
   margin: 0 0 5px 0;
   font-size: 14px;
   color: #b8b8d4;
-  font-family: 'Orbitron', monospace;
+  font-family: 'Varela Round', monospace;
 }
 
 .task-location {
@@ -3440,7 +3441,7 @@ html, body {
   color: #7a7a9e;
   font-style: italic;
   padding: 30px;
-  font-family: 'Orbitron', monospace;
+  font-family: 'Varela Round', monospace;
   font-size: 16px;
   background: linear-gradient(135deg, #2d2d3f 0%, #3a3a52 100%);
   border: 2px dashed #45b7d1;
@@ -3459,7 +3460,7 @@ html, body {
   font-weight: 700;
   z-index: 1000;
   box-shadow: 0 8px 25px rgba(0, 0, 0, 0.4);
-  font-family: 'Orbitron', monospace;
+  font-family: 'Varela Round', monospace;
   text-transform: uppercase;
   letter-spacing: 1px;
   border: 2px solid transparent;
@@ -3484,7 +3485,7 @@ html, body {
   color: #ff6b6b;
   margin-top: 12px;
   font-size: 14px;
-  font-family: 'Orbitron', monospace;
+  font-family: 'Varela Round', monospace;
   font-weight: 600;
   text-shadow: 0 0 8px rgba(255, 107, 107, 0.6);
 }
@@ -3548,7 +3549,7 @@ html, body {
 }
 
 .btn-panic {
-  font-family: 'Orbitron', monospace;
+  font-family: 'Varela Round', monospace;
   font-size: 28px;
   font-weight: 900;
   padding: 25px 50px;
@@ -3625,7 +3626,7 @@ html, body {
   border: none;
   border-radius: 15px;
   padding: 20px 30px;
-  font-family: 'Orbitron', monospace;
+  font-family: 'Varela Round', monospace;
   font-weight: 700;
   font-size: 18px;
   text-transform: uppercase;
@@ -3732,7 +3733,7 @@ html, body {
 .modal-header h3 {
   margin: 0;
   color: #4ecdc4;
-  font-family: 'Orbitron', monospace;
+  font-family: 'Varela Round', monospace;
   font-weight: 700;
   font-size: 18px;
   text-transform: uppercase;
@@ -3770,7 +3771,7 @@ html, body {
 .loading-text {
   text-align: center;
   color: #4ecdc4;
-  font-family: 'Orbitron', monospace;
+  font-family: 'Varela Round', monospace;
   font-size: 16px;
   padding: 30px;
   text-transform: uppercase;
@@ -3780,7 +3781,7 @@ html, body {
 .no-players {
   text-align: center;
   color: #7a7a9e;
-  font-family: 'Orbitron', monospace;
+  font-family: 'Varela Round', monospace;
   font-size: 16px;
   padding: 30px;
   text-transform: uppercase;
@@ -3799,7 +3800,7 @@ html, body {
   border-radius: 15px;
   background: linear-gradient(135deg, #2d2d3f 0%, #3a3a52 100%);
   color: #ffffff;
-  font-family: 'Orbitron', monospace;
+  font-family: 'Varela Round', monospace;
   font-weight: 700;
   font-size: 16px;
   text-transform: uppercase;
@@ -4002,7 +4003,7 @@ html, body {
   border-radius: 8px;
   padding: 12px 15px;
   color: #00ff41;
-  font-family: 'Orbitron', monospace;
+  font-family: 'Varela Round', monospace;
   font-size: 16px;
   text-align: center;
   width: 100%;
@@ -4027,7 +4028,7 @@ html, body {
   border-radius: 8px;
   padding: 12px 25px;
   color: #000000;
-  font-family: 'Orbitron', monospace;
+  font-family: 'Varela Round', monospace;
   font-weight: 700;
   font-size: 16px;
   cursor: pointer;
@@ -4067,7 +4068,7 @@ html, body {
   border-radius: 8px;
   padding: 10px 20px;
   color: #ffffff;
-  font-family: 'Orbitron', monospace;
+  font-family: 'Varela Round', monospace;
   font-weight: 600;
   cursor: pointer;
   transition: all 0.3s ease;
@@ -4289,7 +4290,7 @@ html, body {
   border-radius: 8px;
   padding: 12px 25px;
   color: #ffffff;
-  font-family: 'Orbitron', monospace;
+  font-family: 'Varela Round', monospace;
   font-weight: 700;
   font-size: 16px;
   cursor: pointer;
@@ -4432,7 +4433,7 @@ html, body {
 
 .vitals-header h3 {
   color: #155724;
-  font-family: 'Orbitron', monospace;
+  font-family: 'Varela Round', monospace;
   font-size: 24px;
   font-weight: 700;
   text-transform: uppercase;
@@ -4471,7 +4472,7 @@ html, body {
 
 .status-text {
   color: #155724;
-  font-family: 'Orbitron', monospace;
+  font-family: 'Varela Round', monospace;
   font-weight: 600;
   font-size: 12px;
   text-transform: uppercase;
@@ -4539,7 +4540,7 @@ html, body {
 .vital-status {
   padding: 4px 8px;
   border-radius: 4px;
-  font-family: 'Orbitron', monospace;
+  font-family: 'Varela Round', monospace;
   font-size: 11px;
   font-weight: 700;
   text-transform: uppercase;
@@ -4566,7 +4567,7 @@ html, body {
   font-size: 18px;
   font-weight: 700;
   color: #495057;
-  font-family: 'Orbitron', monospace;
+  font-family: 'Varela Round', monospace;
   text-transform: uppercase;
   letter-spacing: 1px;
   margin-bottom: 10px;
@@ -4589,7 +4590,7 @@ html, body {
 }
 
 .vital-label {
-  font-family: 'Orbitron', monospace;
+  font-family: 'Varela Round', monospace;
   font-size: 12px;
   font-weight: 600;
   color: #6c757d;
@@ -4695,7 +4696,7 @@ html, body {
 }
 
 .no-vitals p {
-  font-family: 'Orbitron', monospace;
+  font-family: 'Varela Round', monospace;
   font-size: 18px;
   font-weight: 600;
   margin: 0;
@@ -4704,7 +4705,7 @@ html, body {
 }
 
 .no-vitals small {
-  font-family: 'Orbitron', monospace;
+  font-family: 'Varela Round', monospace;
   font-size: 12px;
   opacity: 0.7;
 }
@@ -4789,7 +4790,7 @@ html, body {
 
 .alert-header h3 {
   color: #d9534f;
-  font-family: 'Orbitron', monospace;
+  font-family: 'Varela Round', monospace;
   font-size: 24px;
   font-weight: 900;
   text-transform: uppercase;
@@ -4800,7 +4801,7 @@ html, body {
 
 .alert-message {
   color: #8a6d3b;
-  font-family: 'Orbitron', monospace;
+  font-family: 'Varela Round', monospace;
   font-size: 16px;
   font-weight: 600;
   text-align: center;
@@ -4829,7 +4830,7 @@ html, body {
   border-radius: 12px;
   padding: 15px 30px;
   color: #ffffff;
-  font-family: 'Orbitron', monospace;
+  font-family: 'Varela Round', monospace;
   font-size: 18px;
   font-weight: 700;
   text-transform: uppercase;
@@ -4873,7 +4874,7 @@ html, body {
   border: 2px solid #28a745;
   border-radius: 8px;
   color: #155724;
-  font-family: 'Orbitron', monospace;
+  font-family: 'Varela Round', monospace;
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 1px;
@@ -4932,7 +4933,7 @@ html, body {
 
 .game-actions h4 {
   color: #0d6efd;
-  font-family: 'Orbitron', monospace;
+  font-family: 'Varela Round', monospace;
   font-weight: 700;
   margin-bottom: 15px;
   text-transform: uppercase;
@@ -4957,7 +4958,7 @@ html, body {
   border-radius: 12px;
   cursor: pointer;
   transition: all 0.3s ease;
-  font-family: 'Orbitron', monospace;
+  font-family: 'Varela Round', monospace;
   position: relative;
   overflow: hidden;
   padding: 0;
@@ -5005,7 +5006,7 @@ html, body {
 
 .player-tasks h4 {
   color: #00d4ff;
-  font-family: 'Orbitron', monospace;
+  font-family: 'Varela Round', monospace;
   font-weight: 700;
   margin-bottom: 25px;
   text-transform: uppercase;
@@ -5115,7 +5116,7 @@ html, body {
 
 .task-title {
   color: #ffffff;
-  font-family: 'Orbitron', monospace;
+  font-family: 'Varela Round', monospace;
   font-weight: 600;
   font-size: 16px;
   text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.5);
@@ -5148,7 +5149,7 @@ html, body {
   width: 100%;
   margin-top: 20px;
   padding: 15px 25px;
-  font-family: 'Orbitron', monospace;
+  font-family: 'Varela Round', monospace;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 2px;
@@ -5308,7 +5309,7 @@ html, body {
   gap: 12px;
   padding: 15px 25px;
   border-radius: 12px;
-  font-family: 'Orbitron', monospace;
+  font-family: 'Varela Round', monospace;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 2px;
@@ -5402,7 +5403,7 @@ html, body {
   justify-content: space-between;
   align-items: center;
   margin-bottom: 12px;
-  font-family: 'Orbitron', monospace;
+  font-family: 'Varela Round', monospace;
 }
 
 .progress-label {
@@ -6623,7 +6624,7 @@ html, body {
 
 .blackmail-modal-header h2 {
   color: #00d4ff;
-  font-family: 'Orbitron', monospace;
+  font-family: 'Varela Round', monospace;
   font-weight: 700;
   margin: 0;
   text-transform: uppercase;
@@ -6667,7 +6668,7 @@ html, body {
 
 .blackmail-players-list h3 {
   color: #ffffff;
-  font-family: 'Orbitron', monospace;
+  font-family: 'Varela Round', monospace;
   font-weight: 600;
   margin-bottom: 20px;
   text-align: center;
@@ -6737,7 +6738,7 @@ html, body {
 
 .blackmail-modal-footer .btn {
   min-width: 120px;
-  font-family: 'Orbitron', monospace;
+  font-family: 'Varela Round', monospace;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 1px;
@@ -6867,7 +6868,7 @@ html, body {
 
 .sabotage-modal-header h2 {
   color: #ff6b6b;
-  font-family: 'Orbitron', monospace;
+  font-family: 'Varela Round', monospace;
   font-weight: 700;
   margin: 0;
   text-transform: uppercase;
@@ -6904,7 +6905,7 @@ html, body {
 
 .sabotage-modal-content h3 {
   color: #ffffff;
-  font-family: 'Orbitron', monospace;
+  font-family: 'Varela Round', monospace;
   font-weight: 600;
   margin-bottom: 25px;
   text-transform: uppercase;
@@ -6963,7 +6964,7 @@ html, body {
 
 .sabotage-modal-footer .btn {
   min-width: 120px;
-  font-family: 'Orbitron', monospace;
+  font-family: 'Varela Round', monospace;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 1px;
@@ -7067,7 +7068,7 @@ html, body {
 
 .blackmail-alert {
   color: #ff4444;
-  font-family: 'Orbitron', monospace;
+  font-family: 'Varela Round', monospace;
   font-size: 14px;
   font-weight: 600;
   text-transform: uppercase;
@@ -7085,7 +7086,7 @@ html, body {
 
 .blackmail-text {
   color: #ff4444;
-  font-family: 'Orbitron', monospace;
+  font-family: 'Varela Round', monospace;
   font-size: 14px;
   font-weight: 600;
   text-transform: uppercase;
@@ -7100,7 +7101,7 @@ html, body {
   margin: 0;
   text-align: center;
   color: #ffffff;
-  font-family: 'Orbitron', monospace;
+  font-family: 'Varela Round', monospace;
   font-weight: 900;
   text-transform: uppercase;
   letter-spacing: 3px;
@@ -7184,7 +7185,7 @@ html, body {
 .role-modal-header h3 {
   margin: 0;
   color: #ffffff;
-  font-family: 'Orbitron', monospace;
+  font-family: 'Varela Round', monospace;
   font-size: 24px;
   font-weight: 700;
   text-transform: uppercase;
@@ -7203,7 +7204,7 @@ html, body {
 }
 
 .role-title {
-  font-family: 'Orbitron', monospace;
+  font-family: 'Varela Round', monospace;
   font-size: clamp(14px, 5vw, 24px); /* Jeszcze mniejszy zakres */
   font-weight: 900;
   text-transform: uppercase;
@@ -7263,7 +7264,7 @@ html, body {
 }
 
 .role-description {
-  font-family: 'Orbitron', monospace;
+  font-family: 'Varela Round', monospace;
   font-size: 16px;
   line-height: 1.6;
   color: #cccccc;
@@ -7286,7 +7287,7 @@ html, body {
   border: none;
   border-radius: 10px;
   padding: 12px 30px;
-  font-family: 'Orbitron', monospace;
+  font-family: 'Varela Round', monospace;
   font-weight: 600;
   font-size: 16px;
   text-transform: uppercase;
@@ -7310,7 +7311,7 @@ html, body {
   margin-top: 15px;
   text-align: center;
   color: #ffffff;
-  font-family: 'Orbitron', monospace;
+  font-family: 'Varela Round', monospace;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 2px;
@@ -7397,7 +7398,7 @@ html, body {
   border: none;
   border-radius: 12px;
   padding: 12px 16px;
-  font-family: 'Orbitron', monospace;
+  font-family: 'Varela Round', monospace;
   font-weight: 600;
   font-size: 12px;
   text-transform: uppercase;

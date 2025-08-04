@@ -130,7 +130,7 @@
                     <button class="action-btn" @click="reportCorpse" :disabled="!isLoggedInToGame || isPlayerDead">
                       <img src="../images/icon-report.png" alt="Report" class="btn-icon-img">
                     </button>
-                    <button class="action-btn" @click="showKillConfirm" :disabled="!isLoggedInToGame || isPlayerDead">
+                    <button class="action-btn" @click="showKillConfirm" :disabled="!isLoggedInToGame">
                       <img src="../images/icon-kill.png" alt="Kill" class="btn-icon-img">
                     </button>
                     <button class="action-btn" @click="openMapModal" :disabled="!isLoggedInToGame || isPlayerDead">

@@ -133,7 +133,7 @@
                     <button class="action-btn" @click="showKillConfirm" :disabled="!isLoggedInToGame">
                       <img src="../images/icon-kill.png" alt="Kill" class="btn-icon-img">
                     </button>
-                    <button class="action-btn" @click="openMapModal" :disabled="!isLoggedInToGame || isPlayerDead">
+                    <button class="action-btn" @click="openMapModal" :disabled="!isLoggedInToGame">
                       <img src="../images/icon-map.png" alt="Map" class="btn-icon-img">
                     </button>
                   </div>
@@ -274,7 +274,7 @@
           <!-- PANIC Button Section -->
           <div v-if="!shouldShowOxygenAlert" class="panic-section">
             <div class="panic-container">
-              <button class="main-panel-map" @click="openMapModal" :disabled="!isLoggedInToGame || isPlayerDead">
+              <button class="main-panel-map" @click="openMapModal">
                 <img src="../images/icon-map.png" alt="Map" class="btn-icon-img">
               </button>
 
@@ -659,8 +659,8 @@
           <div class="oxygen-controls">
             <button 
               class="btn-restore-oxygen" 
-              :disabled="!gameState.sabotageDeadlineDateUtc"
-              :class="{ 'inactive': !gameState.sabotageDeadlineDateUtc }"
+              :disabled="!shouldShowOxygenAlert"
+              :class="{ 'inactive': !shouldShowOxygenAlert }"
               @mousedown="pressFirstO2"
               @mouseup="releaseFirstO2"
               @mouseleave="releaseFirstO2"
@@ -670,7 +670,7 @@
               🔧 Przywróć tlen
             </button>
             
-            <div v-if="!gameState.sabotageDeadlineDateUtc" class="oxygen-status-normal">
+            <div v-if="!shouldShowOxygenAlert" class="oxygen-status-normal">
               <span class="status-icon">✅</span>
               <span>System tlenowy działa prawidłowo</span>
             </div>
@@ -706,8 +706,8 @@
           <div class="oxygen-controls">
             <button 
               class="btn-restore-oxygen" 
-              :disabled="!gameState.sabotageDeadlineDateUtc"
-              :class="{ 'inactive': !gameState.sabotageDeadlineDateUtc }"
+              :disabled="!shouldShowOxygenAlert"
+              :class="{ 'inactive': !shouldShowOxygenAlert }"
               @mousedown="pressSecondO2"
               @mouseup="releaseSecondO2"
               @mouseleave="releaseSecondO2"
@@ -717,7 +717,7 @@
               🔧 Przywróć tlen
             </button>
             
-            <div v-if="!gameState.sabotageDeadlineDateUtc" class="oxygen-status-normal">
+            <div v-if="!shouldShowOxygenAlert" class="oxygen-status-normal">
               <span class="status-icon">✅</span>
               <span>System tlenowy działa prawidłowo</span>
             </div>
@@ -1241,6 +1241,8 @@ export default {
     
     // Map modal functions
     const openMapModal = () => {
+      console.log('openMapModal');
+
       showMapModal.value = true
     }
     
@@ -1507,6 +1509,17 @@ export default {
         sabotageChecked.value = false;
       }
       
+      // Sprawdź czy gra się rozpoczęła (zmiana z false na true)
+      if (!gameState.value.isGameActive && status.isGameActive && registeredPlayerName.value) {
+        console.log('🎮 Gra się rozpoczęła! Automatyczne ładowanie zadań dla gracza:', registeredPlayerName.value)
+        loadPlayerTasks()
+        
+        // Sprawdź czy pokazać modal z rolą po rozpoczęciu gry
+        setTimeout(() => {
+          showRoleInfo()
+        }, 1000) // Opóźnienie aby upewnić się że gameState jest zaktualizowany
+      }
+      
       gameState.value = {
         playersInfo: status.playersInfo || [],
         isGameActive: status.isGameActive || false,
@@ -1523,17 +1536,6 @@ export default {
         isBlackmailUsed: status.isBlackmailUsed || false,
         sabotageCooldownDateUtc: status.sabotageCooldownDateUtc ? new Date(status.sabotageCooldownDateUtc) : null,
         panicCooldown: status.panicCooldown ? new Date(status.panicCooldown) : null
-      }
-      
-      // Sprawdź czy gra się rozpoczęła (zmiana z false na true)
-      if (!gameState.value.isGameActive && status.isGameActive && registeredPlayerName.value) {
-        console.log('🎮 Gra się rozpoczęła! Automatyczne ładowanie zadań dla gracza:', registeredPlayerName.value)
-        loadPlayerTasks()
-        
-        // Sprawdź czy pokazać modal z rolą po rozpoczęciu gry
-        setTimeout(() => {
-          showRoleInfo()
-        }, 1000) // Opóźnienie aby upewnić się że gameState jest zaktualizowany
       }
       
       // Sprawdź warunki zwycięstwa
@@ -1846,6 +1848,9 @@ export default {
           const errorText = await response.text()
           console.warn('❌ Error response:', errorText)
         }
+
+        loadPlayerTasks();
+
       } catch (error) {
         console.error('💥 Błąd podczas sprawdzania stanu gry:', error)
         if (error.message.includes('fetch')) {
@@ -1929,7 +1934,7 @@ export default {
           showMessage('Pomyślnie zalogowano do gry!', 'success')
           
           // Load player tasks after successful login
-          loadPlayerTasks()
+          await loadPlayerTasks()
           
           // Check game state to get latest data
           checkGame()

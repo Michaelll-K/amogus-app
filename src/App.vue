@@ -127,7 +127,7 @@
                     <button class="action-btn" @click="openBlackmailModal" :disabled="!isLoggedInToGame || isPlayerDead">
                       <img src="../images/icon-blackmail.png" alt="Blackmail" class="btn-icon-img">
                     </button>
-                    <button class="action-btn" @click="reportCorpse" :disabled="!isLoggedInToGame || isPlayerDead">
+                    <button class="action-btn" @click="showReportConfirm" :disabled="!isLoggedInToGame || isPlayerDead">
                       <img src="../images/icon-report.png" alt="Report" class="btn-icon-img">
                     </button>
                     <button class="action-btn" @click="showKillConfirm" :disabled="!isLoggedInToGame">
@@ -770,6 +770,26 @@
       </div>
     </div>
     
+    <!-- Modal potwierdzenia zgłoszenia -->
+    <div v-if="showReportConfirmModal" class="report-confirm-modal-overlay" @click="closeReportConfirmModal">
+      <div class="report-confirm-modal" @click.stop>
+        <div class="report-confirm-modal-header">
+          <h2>⚠️ Potwierdzenie akcji</h2>
+          <button class="report-confirm-modal-close" @click="closeReportConfirmModal">×</button>
+        </div>
+        <div class="report-confirm-modal-content">
+          <div class="report-icon">🚨</div>
+          <h3>Czy na pewno chcesz zgłosić martwe ciało?</h3>
+        </div>
+        <div class="report-confirm-modal-footer">
+          <button class="btn btn-secondary" @click="closeReportConfirmModal">Anuluj</button>
+          <button class="btn btn-warning" @click="confirmReport" :disabled="reportLoading">
+            {{ reportLoading ? 'Zgłaszanie...' : 'Zgłoś' }}
+          </button>
+        </div>
+      </div>
+    </div>
+    
     <!-- Modal informacyjny o panice/martwym ciele -->
     <div v-if="showEmergencyModal" class="emergency-modal-overlay">
       <div class="emergency-modal">
@@ -980,6 +1000,44 @@
               {{ gameState.impostorsNames }}
             </div>
           </div>
+          
+          <!-- Detective functionality -->
+          <div v-if="checkedPlayerRole && checkedPlayerName" class="checked-role-result">
+            <h4>🔍 Wynik sprawdzenia:</h4>
+            <div class="checked-player-info">
+              <p><strong>Sprawdzony gracz:</strong> {{ checkedPlayerName }}</p>
+              <p><strong>Rola:</strong> <span :class="checkedPlayerRole.includes('Impostor') ? 'checked-role-impostor' : 'checked-role-crewmate'">{{ checkedPlayerRole }}</span></p>
+            </div>
+          </div>
+          <div v-if="playerRole === 'Detective' && !gameState.isDetectiveUsed && !roleDescription" class="detective-section">
+            <div>
+              <h4>🔍 Sprawdź rolę gracza:</h4>
+              <div v-if="detectiveLoading" class="detective-loading">
+                <p>⏳ Ładowanie graczy...</p>
+              </div>
+              <div v-else-if="!detectivePlayers || detectivePlayers.length === 0" class="no-detective-players">
+                <p>❌ Brak graczy do sprawdzenia</p>
+              </div>
+              <div v-else class="detective-players-list">
+                <div v-if="detectiveActionLoading" class="detective-loading">
+                  <p>⏳ Sprawdzanie roli...</p>
+                </div>
+                <div v-else class="detective-player-item" 
+                     v-for="player in detectivePlayers" 
+                     :key="player.id"
+                     @click="selectDetectivePlayer(player)"
+                     :class="{ 'selected': selectedDetectivePlayer?.id === player.id }"
+                >
+                  <div class="player-info">
+                    <span class="player-name">{{ player.name }}</span>
+                    <span class="player-status" :class="{ 'alive': player.isAlive, 'dead': !player.isAlive }">
+                      {{ player.isAlive ? '🟢 Żywy' : '🔴 Martwy' }}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
         
         <div class="role-modal-footer">
@@ -1053,6 +1111,10 @@ export default {
     
     // Kill confirmation modal functionality
     const showKillConfirmModal = ref(false)
+    
+    // Report confirmation modal functionality
+    const showReportConfirmModal = ref(false)
+    const reportLoading = ref(false)
     const killLoading = ref(false)
     
     // Emergency modal functionality
@@ -1073,6 +1135,15 @@ export default {
     const selectedBlackmailPlayer = ref(null)
     const blackmailLoading = ref(false)
     const blackmailActionLoading = ref(false)
+    
+    // Detective functionality
+    const detectivePlayers = ref([])
+    const selectedDetectivePlayer = ref(null)
+    const detectiveLoading = ref(false)
+    const detectiveActionLoading = ref(false)
+    const checkedPlayerRole = ref(localStorage.getItem('checkedPlayerRole') || '')
+    const checkedPlayerName = ref(localStorage.getItem('checkedPlayerName') || '')
+    const showCheckedRole = ref(false)
     
     // Sabotage modal functionality
     const showSabotageModal = ref(false)
@@ -1106,9 +1177,10 @@ export default {
       tasksToComplete: null, 
       completedTasks: null,
       winningTeam: '',
-      isBlackmailUsed: false,
+      isBlackmailUsed: false, // bool
       sabotageCooldownDateUtc: null,
-      panicCooldown: null
+      panicCooldown: null,
+      isDetectiveUsed: false
     })
     
     // Konfiguracja API z fallback
@@ -1213,11 +1285,22 @@ export default {
       }
     }
     
-    const reportCorpse = async () => {
+    // Report confirmation modal functions
+    const showReportConfirm = () => {
+      showReportConfirmModal.value = true
+    }
+    
+    const closeReportConfirmModal = () => {
+      showReportConfirmModal.value = false
+    }
+    
+    const confirmReport = async () => {
       if (!registeredPlayerName.value) {
         showMessage('Błąd: Brak nazwy gracza', 'error')
         return
       }
+      
+      reportLoading.value = true
       
       try {
         const response = await fetch(`${PLAYER_API_BASE}/${encodeURIComponent(registeredPlayerName.value)}/corpse`, {
@@ -1229,6 +1312,7 @@ export default {
         
         if (response.ok) {
           showMessage('Martwe ciało zostało zgłoszone pomyślnie!', 'success')
+          closeReportConfirmModal()
         } else {
           const errorText = await response.text()
           showMessage(`Błąd podczas zgłaszania martwego ciała: ${errorText}`, 'error')
@@ -1236,8 +1320,12 @@ export default {
       } catch (error) {
         console.error('Błąd podczas zgłaszania martwego ciała:', error)
         showMessage('Błąd połączenia z serwerem', 'error')
+      } finally {
+        reportLoading.value = false
       }
     }
+    
+
     
     // Map modal functions
     const openMapModal = () => {
@@ -1424,6 +1512,73 @@ export default {
       }
     }
     
+    // Detective functions
+    const loadDetectivePlayers = async () => {
+      detectiveLoading.value = true
+      
+      try {
+        const response = await fetch(`${IMPOSTORS_API_BASE}/users-to-blackmail`, {
+          headers: getAuthHeaders()
+        })
+        
+        if (response.ok) {
+          const allPlayers = await response.json()
+          detectivePlayers.value = allPlayers.filter(player => player.isAlive)
+          console.log('✅ Załadowano graczy do sprawdzenia:', detectivePlayers.value)
+        } else {
+          const errorText = await response.text()
+          showMessage(`Błąd ładowania graczy: ${errorText}`, 'error')
+          console.error('❌ Błąd ładowania graczy do sprawdzenia:', response.status, errorText)
+        }
+      } catch (error) {
+        showMessage('Błąd ładowania graczy do sprawdzenia', 'error')
+        console.error('💥 Błąd podczas ładowania graczy do sprawdzenia:', error)
+      } finally {
+        detectiveLoading.value = false
+      }
+    }
+    
+    const selectDetectivePlayer = async (player) => {
+      if (!player.name) {
+        showMessage('Wybierz gracza do sprawdzenia', 'error')
+        return
+      }
+      
+      detectiveActionLoading.value = true
+      
+      try {
+        const response = await fetch(`${PLAYER_API_BASE}/${encodeURIComponent(registeredPlayerName.value)}/use-detective/${encodeURIComponent(player.name)}`, {
+          method: 'POST',
+          headers: getAuthHeaders()
+        })
+        
+        if (response.ok || response.status === 202) {
+          const role = await response.text()
+
+          localStorage.setItem('checkedPlayerRole', role)
+          localStorage.setItem('checkedPlayerName', player.name)
+          
+          // Update reactive variables
+          checkedPlayerRole.value = role
+          checkedPlayerName.value = player.name
+
+          selectedDetectivePlayer.value = player
+          showCheckedRole.value = true
+          showMessage(`✅ Sprawdzono rolę gracza: ${player.name}`, 'success')
+          console.log('✅ Sprawdzono rolę:', player.name, role)
+        } else {
+          const errorText = await response.text()
+          showMessage(`Błąd sprawdzania roli: ${errorText}`, 'error')
+          console.error('❌ Błąd sprawdzania roli:', response.status, errorText)
+        }
+      } catch (error) {
+        showMessage('Błąd podczas sprawdzania roli', 'error')
+        console.error('💥 Błąd podczas sprawdzania roli:', error)
+      } finally {
+        detectiveActionLoading.value = false
+      }
+    }
+    
     // SignalR functions
     const initializeSignalR = async () => {
       try {
@@ -1501,6 +1656,10 @@ export default {
       if (gameState.value.isGameActive && !status.isGameActive) {
         console.log('🎮 Gra się zakończyła, resetuję roleModalShown');
         roleModalShown.value = false;
+        localStorage.removeItem('checkedPlayerRole')
+        localStorage.removeItem('checkedPlayerName')
+        checkedPlayerRole.value = ''
+        checkedPlayerName.value = ''
       }
       
       // Reset sabotage checked flag when new sabotage starts
@@ -1535,7 +1694,8 @@ export default {
         winningTeam: status.winningTeam || '',
         isBlackmailUsed: status.isBlackmailUsed || false,
         sabotageCooldownDateUtc: status.sabotageCooldownDateUtc ? new Date(status.sabotageCooldownDateUtc) : null,
-        panicCooldown: status.panicCooldown ? new Date(status.panicCooldown) : null
+        panicCooldown: status.panicCooldown ? new Date(status.panicCooldown) : null,
+        isDetectiveUsed: status.isDetectiveUsed || false
       }
       
       // Sprawdź warunki zwycięstwa
@@ -2666,27 +2826,17 @@ export default {
     }
 
     const forceRoleShow = () => {
-      const currentPlayer = gameState.value.playersInfo.find(
-        player => player.name.toLowerCase() === registeredPlayerName.value.toLowerCase()
-      );
-
-      if (currentPlayer && currentPlayer.role) {
-        playerRole.value = currentPlayer.role;
-      }
-
-      roleDescription.value = null;
-
-      showRoleModal.value = true;
+      showRoleInfo(true);
     }
     
     // Role modal functions
-    const showRoleInfo = () => {
+    const showRoleInfo = (force = false) => {
       console.log('🎭 showRoleInfo() wywołana');
       console.log('shouldShowRoleModal.value:', shouldShowRoleModal.value);
       console.log('registeredPlayerName.value:', registeredPlayerName.value);
       console.log('gameState.value.playersInfo:', gameState.value.playersInfo);
       
-      if (!shouldShowRoleModal.value) {
+      if (!shouldShowRoleModal.value && !force) {
         console.log('❌ shouldShowRoleModal jest false, wychodzę');
         return;
       }
@@ -2721,10 +2871,20 @@ export default {
           default:
             roleDescription.value = `Twoja rola: ${currentPlayer.role}`;
         }
+
+        if (force){
+          roleDescription.value = null;
+        }
         
         showRoleModal.value = true;
         roleModalShown.value = true; // Oznacz że modal już był pokazany
         console.log('🎭 Modal z rolą pokazany');
+        
+        // Load detective players if the player is a Detective and detective ability is not used
+        if (currentPlayer.role === 'Detective' && !gameState.value.isDetectiveUsed) {
+          console.log('🔍 Loading detective players...');
+          loadDetectivePlayers();
+        }
       } else {
         console.log('❌ Nie znaleziono gracza lub brak roli');
       }
@@ -2732,6 +2892,13 @@ export default {
     
     const closeRoleModal = () => {
       showRoleModal.value = false;
+      // Reset detective state
+      detectivePlayers.value = [];
+      selectedDetectivePlayer.value = null;
+      detectiveLoading.value = false;
+      detectiveActionLoading.value = false;
+      // Keep checkedPlayerRole and checkedPlayerName for persistent display
+      showCheckedRole.value = false;
     }
     
     const getRoleClass = () => {
@@ -2849,8 +3016,13 @@ export default {
       showKillConfirm,
       closeKillConfirmModal,
       confirmKill,
+      // Report confirmation modal
+      showReportConfirmModal,
+      reportLoading,
+      showReportConfirm,
+      closeReportConfirmModal,
+      confirmReport,
       // Player actions
-      reportCorpse,
       // Map modal
       showMapModal,
       activeMapTab,
@@ -2872,6 +3044,16 @@ export default {
         openBlackmailModal,
         closeBlackmailModal,
         selectBlackmailPlayer,
+        // Detective functionality
+        detectivePlayers,
+        selectedDetectivePlayer,
+        detectiveLoading,
+        detectiveActionLoading,
+        checkedPlayerRole,
+        checkedPlayerName,
+        showCheckedRole,
+        loadDetectivePlayers,
+        selectDetectivePlayer,
         showSabotageModal,
         sabotageLoading,
         openSabotageModal,
@@ -6005,6 +6187,182 @@ html, body {
   }
 }
 
+/* Report Confirmation Modal Styles */
+.report-confirm-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.8);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 9999;
+  animation: fadeIn 0.3s ease-in-out;
+}
+
+.report-confirm-modal {
+  background: linear-gradient(135deg, #2e2d1b, #2e2a1a);
+  border: 2px solid #ff9500;
+  border-radius: 15px;
+  padding: 30px;
+  max-width: 450px;
+  width: 90%;
+  text-align: center;
+  box-shadow: 0 0 30px rgba(255, 149, 0, 0.5);
+  animation: slideIn 0.4s ease-out;
+}
+
+.report-confirm-modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+  padding-bottom: 15px;
+  border-bottom: 1px solid #ff9500;
+}
+
+.report-confirm-modal-header h2 {
+  color: #ff9500;
+  margin: 0;
+  font-size: 22px;
+  text-shadow: 0 0 10px rgba(255, 149, 0, 0.5);
+}
+
+.report-confirm-modal-close {
+  background: none;
+  border: none;
+  color: #ff9500;
+  font-size: 24px;
+  cursor: pointer;
+  padding: 0;
+  width: 30px;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  transition: all 0.3s ease;
+}
+
+.report-confirm-modal-close:hover {
+  background: rgba(255, 149, 0, 0.2);
+  transform: scale(1.1);
+}
+
+.report-confirm-modal-content {
+  margin-bottom: 25px;
+}
+
+.report-icon {
+  font-size: 50px;
+  margin-bottom: 15px;
+  animation: reportPulse 2s infinite;
+}
+
+.report-confirm-modal-content h3 {
+  color: #ffffff;
+  margin: 0 0 15px 0;
+  font-size: 18px;
+}
+
+.report-confirm-modal-footer {
+  display: flex;
+  justify-content: center;
+  gap: 15px;
+  flex-wrap: wrap;
+}
+
+.report-confirm-modal-footer .btn {
+  padding: 10px 25px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: bold;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  border: none;
+}
+
+.report-confirm-modal-footer .btn-secondary {
+  background: linear-gradient(45deg, #6c757d, #495057);
+  color: #ffffff;
+}
+
+.report-confirm-modal-footer .btn-secondary:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 5px 15px rgba(108, 117, 125, 0.4);
+}
+
+.report-confirm-modal-footer .btn-warning {
+  background: linear-gradient(45deg, #ff9500, #e6851a);
+  color: #ffffff;
+}
+
+.report-confirm-modal-footer .btn-warning:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 5px 15px rgba(255, 149, 0, 0.4);
+}
+
+.report-confirm-modal-footer .btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+}
+
+@keyframes reportPulse {
+  0%, 100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(1.1);
+    opacity: 0.8;
+  }
+}
+
+/* Responsive design for report confirmation modal */
+@media (max-width: 768px) {
+  .report-confirm-modal {
+    padding: 20px;
+    margin: 20px;
+  }
+  
+  .report-confirm-modal-header h2 {
+    font-size: 20px;
+  }
+  
+  .report-icon {
+    font-size: 40px;
+  }
+  
+  .report-confirm-modal-footer {
+    flex-direction: column;
+    gap: 10px;
+  }
+}
+
+@media (max-width: 480px) {
+  .report-confirm-modal {
+    padding: 15px;
+    margin: 15px;
+  }
+  
+  .report-confirm-modal-header h2 {
+    font-size: 18px;
+  }
+  
+  .report-icon {
+    font-size: 35px;
+  }
+  
+  .report-confirm-modal-content h3 {
+    font-size: 16px;
+  }
+}
+
 /* Emergency Modal Styles */
 .emergency-modal-overlay {
   position: fixed;
@@ -6839,6 +7197,104 @@ html, body {
     flex-direction: column;
     gap: 10px;
   }
+}
+
+/* Detective Styles */
+.detective-section {
+  margin-top: 20px;
+  padding: 20px;
+  background: linear-gradient(135deg, #2a2a3e, #1e1e2e);
+  border: 2px solid #333;
+  border-radius: 12px;
+}
+
+.detective-section h4 {
+  color: #00d4ff;
+  font-family: 'Varela Round', monospace;
+  font-weight: 700;
+  margin-bottom: 15px;
+  text-align: center;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.detective-loading, .no-detective-players {
+  text-align: center;
+  padding: 20px;
+  color: #e0e0e0;
+  font-style: italic;
+}
+
+.detective-loading p, .no-detective-players p {
+  font-size: 16px;
+  margin: 0;
+  color: #00d4ff;
+  font-weight: 600;
+}
+
+.detective-players-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.detective-player-item {
+  background: linear-gradient(135deg, #2a2a3e, #1e1e2e);
+  border: 2px solid #333;
+  border-radius: 12px;
+  padding: 15px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.detective-player-item:hover {
+  border-color: #00d4ff;
+  transform: translateY(-2px);
+  box-shadow: 0 5px 15px rgba(0, 212, 255, 0.3);
+}
+
+.detective-player-item.selected {
+  border-color: #ff6b6b;
+  background: linear-gradient(135deg, #3e2a2a, #2e1e1e);
+  box-shadow: 0 5px 15px rgba(255, 107, 107, 0.3);
+}
+
+.checked-role-result {
+  text-align: center;
+  padding: 20px;
+}
+
+.checked-role-result h4 {
+  color: #00d4ff;
+  margin-bottom: 15px;
+}
+
+.checked-player-info {
+  background: linear-gradient(135deg, #2a2a3e, #1e1e2e);
+  border: 2px solid #00d4ff;
+  border-radius: 12px;
+  padding: 20px;
+  margin-bottom: 20px;
+}
+
+.checked-player-info p {
+  margin: 10px 0;
+  color: #ffffff;
+  font-weight: 600;
+}
+
+.checked-role-impostor {
+  color: #ec7063;
+  font-weight: 700;
+  font-size: 18px;
+  text-transform: uppercase;
+}
+
+.checked-role-crewmate {
+  color: #00d4ff;
+  font-weight: 700;
+  font-size: 18px;
+  text-transform: uppercase;
 }
 
 @media (max-width: 480px) {

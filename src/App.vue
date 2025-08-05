@@ -7236,6 +7236,29 @@ html, body {
   display: flex;
   flex-direction: column;
   gap: 10px;
+  max-height: 300px;
+  overflow-y: auto;
+  padding-right: 8px;
+}
+
+/* Custom scrollbar for detective players list */
+.detective-players-list::-webkit-scrollbar {
+  width: 8px;
+}
+
+.detective-players-list::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 10px;
+}
+
+.detective-players-list::-webkit-scrollbar-thumb {
+  background: linear-gradient(135deg, #00d4ff, #0099cc);
+  border-radius: 10px;
+  transition: background 0.3s ease;
+}
+
+.detective-players-list::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(135deg, #00b8e6, #0088bb);
 }
 
 .detective-player-item {
@@ -7921,5 +7944,23 @@ html, body {
 .role-btn-text {
   font-size: 10px;
   font-weight: 700;
+}
+
+/* Responsive detective players list */
+@media (max-width: 768px) {
+  .detective-players-list {
+    max-height: 250px;
+  }
+}
+
+@media (max-width: 480px) {
+  .detective-players-list {
+    max-height: 200px;
+    padding-right: 4px;
+  }
+  
+  .detective-players-list::-webkit-scrollbar {
+    width: 6px;
+  }
 }
 </style>

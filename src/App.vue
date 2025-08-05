@@ -1523,7 +1523,7 @@ export default {
         
         if (response.ok) {
           const allPlayers = await response.json()
-          detectivePlayers.value = allPlayers.filter(player => player.isAlive)
+          detectivePlayers.value = allPlayers.filter(player => player.isAlive).filter(player => player.name !== registeredPlayerName.value)
           console.log('✅ Załadowano graczy do sprawdzenia:', detectivePlayers.value)
         } else {
           const errorText = await response.text()

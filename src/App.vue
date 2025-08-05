@@ -824,6 +824,20 @@
           <button class="map-modal-close" @click="closeMapModal">×</button>
         </div>
         <div class="map-modal-content">
+          <!-- Zoom controls -->
+          <div class="map-zoom-controls">
+            <button class="zoom-btn zoom-in" @click="zoomIn" :disabled="mapZoomLevel >= 3" title="Powiększ">
+              ➕
+            </button>
+            <span class="zoom-level">{{ Math.round(mapZoomLevel * 100) }}%</span>
+            <button class="zoom-btn zoom-out" @click="zoomOut" :disabled="mapZoomLevel <= 0.5" title="Pomniejsz">
+              ➖
+            </button>
+            <button class="zoom-btn zoom-reset" @click="resetMapZoom" title="Resetuj zoom">
+              🔄
+            </button>
+          </div>
+          
           <!-- Zakładki map -->
           <div class="map-tabs">
             <button 
@@ -850,15 +864,50 @@
           </div>
           
           <!-- Zawartość map -->
-          <div class="map-content">
+          <div 
+            class="map-content" 
+            @wheel="handleMapWheel"
+            @mousedown="handleMapMouseDown"
+            @mousemove="handleMapMouseMove"
+            @mouseup="handleMapMouseUp"
+            @mouseleave="handleMapMouseLeave"
+            @touchstart="handleMapTouchStart"
+            @touchmove="handleMapTouchMove"
+            @touchend="handleMapTouchEnd"
+            :class="{ 'panning': isPanning, 'can-pan': mapZoomLevel > 1 }"
+          >
             <div v-if="activeMapTab === 'out'" class="map-image-container">
-              <img src="../images/map-out.png" alt="Mapa - Dwór" class="map-image">
+              <img 
+                src="../images/map-out.png" 
+                alt="Mapa - Dwór" 
+                class="map-image"
+                :style="{
+                  transform: `scale(${mapZoomLevel}) translate(${mapTranslateX}px, ${mapTranslateY}px)`
+                }"
+                draggable="false"
+              >
             </div>
             <div v-else-if="activeMapTab === 'in'" class="map-image-container">
-              <img src="../images/map-in.png" alt="Mapa - Domek" class="map-image">
+              <img 
+                src="../images/map-in.png" 
+                alt="Mapa - Domek" 
+                class="map-image"
+                :style="{
+                  transform: `scale(${mapZoomLevel}) translate(${mapTranslateX}px, ${mapTranslateY}px)`
+                }"
+                draggable="false"
+              >
             </div>
             <div v-else-if="activeMapTab === 'up'" class="map-image-container">
-              <img src="../images/map-up.png" alt="Mapa - Góra" class="map-image">
+              <img 
+                src="../images/map-up.png" 
+                alt="Mapa - Góra" 
+                class="map-image"
+                :style="{
+                  transform: `scale(${mapZoomLevel}) translate(${mapTranslateX}px, ${mapTranslateY}px)`
+                }"
+                draggable="false"
+              >
             </div>
           </div>
         </div>
@@ -1123,6 +1172,14 @@ export default {
     // Map modal functionality
     const showMapModal = ref(false)
     const activeMapTab = ref('out')
+    const mapZoomLevel = ref(1)
+    const mapTranslateX = ref(0)
+    const mapTranslateY = ref(0)
+    const isPanning = ref(false)
+    const panStartX = ref(0)
+    const panStartY = ref(0)
+    const lastTranslateX = ref(0)
+    const lastTranslateY = ref(0)
     
     // Task details modal functionality
     const showTaskDetailsModal = ref(false)
@@ -1336,10 +1393,116 @@ export default {
     
     const closeMapModal = () => {
       showMapModal.value = false
+      resetMapZoom()
     }
     
     const setActiveMapTab = (tab) => {
       activeMapTab.value = tab
+      // Reset zoom when switching tabs
+      resetMapZoom()
+    }
+    
+    // Map zoom functions
+    const zoomIn = () => {
+      if (mapZoomLevel.value < 3) {
+        mapZoomLevel.value += 0.25
+      }
+    }
+    
+    const zoomOut = () => {
+      if (mapZoomLevel.value > 0.5) {
+        mapZoomLevel.value -= 0.25
+      }
+    }
+    
+    const resetMapZoom = () => {
+      mapZoomLevel.value = 1
+      mapTranslateX.value = 0
+      mapTranslateY.value = 0
+      lastTranslateX.value = 0
+      lastTranslateY.value = 0
+    }
+    
+    const handleMapWheel = (event) => {
+      event.preventDefault()
+      
+      if (event.deltaY < 0) {
+        zoomIn()
+      } else {
+        zoomOut()
+      }
+    }
+    
+    // Map panning functions
+    const handleMapMouseDown = (event) => {
+      if (mapZoomLevel.value > 1) {
+        isPanning.value = true
+        panStartX.value = event.clientX
+        panStartY.value = event.clientY
+        lastTranslateX.value = mapTranslateX.value
+        lastTranslateY.value = mapTranslateY.value
+        event.preventDefault()
+      }
+    }
+    
+    const handleMapMouseMove = (event) => {
+      if (isPanning.value && mapZoomLevel.value > 1) {
+        const deltaX = (event.clientX - panStartX.value) / mapZoomLevel.value
+        const deltaY = (event.clientY - panStartY.value) / mapZoomLevel.value
+        
+        // Calculate new translate values
+        const newTranslateX = lastTranslateX.value + deltaX
+        const newTranslateY = lastTranslateY.value + deltaY
+        
+        // Apply constraints to prevent panning too far
+        const maxTranslate = 200 * (mapZoomLevel.value - 1)
+        
+        mapTranslateX.value = Math.max(-maxTranslate, Math.min(maxTranslate, newTranslateX))
+        mapTranslateY.value = Math.max(-maxTranslate, Math.min(maxTranslate, newTranslateY))
+        
+        event.preventDefault()
+      }
+    }
+    
+    const handleMapMouseUp = () => {
+      isPanning.value = false
+    }
+    
+    const handleMapMouseLeave = () => {
+      isPanning.value = false
+    }
+    
+    // Touch support for mobile devices
+    const handleMapTouchStart = (event) => {
+      if (mapZoomLevel.value > 1 && event.touches.length === 1) {
+        isPanning.value = true
+        panStartX.value = event.touches[0].clientX
+        panStartY.value = event.touches[0].clientY
+        lastTranslateX.value = mapTranslateX.value
+        lastTranslateY.value = mapTranslateY.value
+        event.preventDefault()
+      }
+    }
+    
+    const handleMapTouchMove = (event) => {
+      if (isPanning.value && mapZoomLevel.value > 1 && event.touches.length === 1) {
+        const deltaX = (event.touches[0].clientX - panStartX.value) / mapZoomLevel.value
+        const deltaY = (event.touches[0].clientY - panStartY.value) / mapZoomLevel.value
+        
+        const newTranslateX = lastTranslateX.value + deltaX
+        const newTranslateY = lastTranslateY.value + deltaY
+        
+        const maxTranslate = 200 * (mapZoomLevel.value - 1)
+        
+        mapTranslateX.value = Math.max(-maxTranslate, Math.min(maxTranslate, newTranslateX))
+        mapTranslateY.value = Math.max(-maxTranslate, Math.min(maxTranslate, newTranslateY))
+        
+        event.preventDefault()
+      }
+    }
+    
+    const handleMapTouchEnd = () => {
+      isPanning.value = false
     }
     
     // Task details modal functions
@@ -3026,9 +3189,28 @@ export default {
       // Map modal
       showMapModal,
       activeMapTab,
+      mapZoomLevel,
+      mapTranslateX,
+      mapTranslateY,
+      isPanning,
+      panStartX,
+      panStartY,
+      lastTranslateX,
+      lastTranslateY,
       openMapModal,
       closeMapModal,
       setActiveMapTab,
+      zoomIn,
+      zoomOut,
+      resetMapZoom,
+      handleMapWheel,
+      handleMapMouseDown,
+      handleMapMouseMove,
+      handleMapMouseUp,
+      handleMapMouseLeave,
+      handleMapTouchStart,
+      handleMapTouchMove,
+      handleMapTouchEnd,
       // Task details modal
               showTaskDetailsModal,
         selectedTask,
@@ -6675,6 +6857,85 @@ html, body {
   object-fit: contain;
   border-radius: 8px;
   box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
+  transition: transform 0.2s ease;
+  cursor: grab;
+}
+
+.map-image:active {
+  cursor: grabbing;
+}
+
+/* Map Panning States */
+.map-content.can-pan {
+  cursor: grab;
+}
+
+.map-content.panning {
+  cursor: grabbing;
+}
+
+.map-content.can-pan .map-image {
+  cursor: grab;
+}
+
+.map-content.panning .map-image {
+  cursor: grabbing;
+  user-select: none;
+}
+
+/* Map Zoom Controls */
+.map-zoom-controls {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  margin-bottom: 15px;
+  padding: 10px;
+  background: rgba(0, 0, 0, 0.3);
+  border-radius: 8px;
+  border: 1px solid rgba(78, 205, 196, 0.3);
+}
+
+.zoom-btn {
+  background: linear-gradient(45deg, #4ecdc4, #44a08d);
+  color: #1a1a2e;
+  border: none;
+  border-radius: 50%;
+  width: 40px;
+  height: 40px;
+  font-size: 16px;
+  font-weight: bold;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.zoom-btn:hover:not(:disabled) {
+  transform: scale(1.1);
+  box-shadow: 0 0 15px rgba(78, 205, 196, 0.5);
+}
+
+.zoom-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.zoom-reset {
+  border-radius: 8px !important;
+  width: 45px !important;
+  font-size: 14px !important;
+}
+
+.zoom-level {
+  color: #4ecdc4;
+  font-weight: bold;
+  font-size: 14px;
+  min-width: 50px;
+  text-align: center;
+  text-shadow: 0 0 5px rgba(78, 205, 196, 0.5);
 }
 
 .map-modal-footer {
@@ -6729,6 +6990,22 @@ html, body {
     min-height: 300px;
     padding: 15px;
   }
+  
+  .map-zoom-controls {
+    gap: 8px;
+    padding: 8px;
+  }
+  
+  .zoom-btn {
+    width: 35px;
+    height: 35px;
+    font-size: 14px;
+  }
+  
+  .zoom-reset {
+    width: 40px !important;
+    font-size: 12px !important;
+  }
 }
 
 @media (max-width: 480px) {
@@ -6749,6 +7026,28 @@ html, body {
   .map-content {
     min-height: 250px;
     padding: 10px;
+  }
+  
+  .map-zoom-controls {
+    gap: 6px;
+    padding: 6px;
+    margin-bottom: 10px;
+  }
+  
+  .zoom-btn {
+    width: 30px;
+    height: 30px;
+    font-size: 12px;
+  }
+  
+  .zoom-reset {
+    width: 35px !important;
+    font-size: 10px !important;
+  }
+  
+  .zoom-level {
+    font-size: 12px;
+    min-width: 40px;
   }
 }
 
@@ -7854,7 +8153,7 @@ html, body {
 .countdown-time {
   font-size: 24px;
   font-weight: 900;
-  color: #ffffff;
+  color: #000000;
   text-shadow: 0 0 10px rgba(255, 255, 255, 0.9);
 }
 
